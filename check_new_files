@@ -1,0 +1,147 @@
+#!/bin/bash
+#Script to check the ages of multiple files
+#provide the path to check for files and and a warning number in seconds .
+#
+#
+#path=/home/teja/lufi/shell/processed/
+
+#exit codes :
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+CURRENT_TIME=`date +%s`
+#count=$path/*
+
+print_usage() {
+    echo "
+Usage: check_file_ages_in_dirs --dirs | -d <directories> [-w <max_age>]
+Usage: check_file_ages_in_dirs --help | -h
+
+Description:
+
+This plugin pulls all files in each specified directory, and checks their
+created time against the current time.  If the maximum age of any file is
+exceeded, a warning/critical message is returned as appropriate.
+
+This is useful for examining backup directories for freshness.
+
+Tested to work on Linux/FreeBSD/OS X.
+
+The following arguments are accepted:
+
+  --dirs | -d     A space separated list of directories to examine.  Each
+                  directory will be checked for the age of all files in the
+                  directory.
+
+  -w              (Optional) Generate a warning message if any created file is 
+                  older than this value.  Defaults to 6 hours.
+
+
+"
+}
+
+print_help() {
+    print_usage
+    echo "File ages in a directory plugin for Nagios."
+    echo ""
+}
+#Make sure the correct number of command line
+# arguments have been supplied
+if [ $# -lt 1 ]; then
+    print_usage
+    exit $STATE_UNKNOWN
+fi
+
+# Defaults.
+exitstatus=$STATE_OK
+WARNING=21600
+newer_than_warning=0
+
+# Grab the command line arguments.
+while test -n "$1"; do
+    case "$1" in
+        --help)
+            print_help
+            exit $STATE_OK
+            ;;
+        -h)
+            print_help
+            exit $STATE_OK
+            ;;
+        --dirs)
+            dirs=$2
+            shift
+            ;;
+        -d)
+            dirs=$2
+            shift
+            ;;
+        -w)
+            WARNING=$2
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            print_usage
+            exit $STATE_UNKNOWN
+            ;;
+    esac
+    shift
+done
+
+#validating parameters
+
+if [ ! "$dirs" ]; then
+        echo "No directories provided."
+        exit $STATE_UNKNOWN
+fi
+
+if [ `echo "$WARNING" | grep [^0-9]` ] || [ ! "$WARNING" ]; then
+        echo "Warning value must be a number."
+        exit $STATE_UNKNOWN
+fi
+
+
+
+#working logic
+#
+
+#checking for direcotry is empty :
+
+ls -l $dir > /dev/null 2>&1
+
+if [ "$?" != "0" ];then
+      echo " folder is empty"
+      exit $STATE_OK
+fi
+#checking for files newer than warning time
+rm tmpouterror.txt
+TEMP_FILE="/usr/local/nagios/libexec/tmpouterror.txt"
+find ${dirs} -maxdepth 1 -mtime -1 -type f -printf '%f\n' > $TEMP_FILE
+#$FILES=`cat tmp.out`
+
+#for file1  in "$FILES"
+
+while read LINE; 
+do
+  #echo $LINE;
+  ##echo $dirs"/"$file1
+  st_ctime=`stat --printf=%Y $dirs"/"$file1` > /dev/null 2>&1
+  ##echo $st_ctime
+  age=$((CURRENT_TIME-st_ctime))
+  ##echo $age
+  if [ $age -lt $WARNING ];then
+     newer_than_warning=1
+  fi
+done < $TEMP_FILE
+if [ "$newer_than_warning" = "0" ]  
+  then
+    echo "no files newer than $WARNING seconds "
+    exit $STATE_OK
+  else
+    
+    echo " files newer than $WARNING seconds found"
+    exit $STATE_CRITICAL
+fi
