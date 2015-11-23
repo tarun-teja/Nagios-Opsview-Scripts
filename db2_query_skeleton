@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+#
+# Description:
+#custom skeleton script for running a db query on DB2 database
+STATE_OK=0
+STATE_UNKNOWN=3
+STATE_WARNING=1
+STATE_CRITICAL=2
+CHECKAGE=$1
+
+#Checking for the config file
+if [ ! -r "<path to config file>" ]
+then
+  echo "Configuration file <path to config file> is missing or not readable, cannot continue processing!"
+  exit 1
+fi
+
+# Source the global configuration
+source /<path to config file >
+
+   #connects to database
+   #RES=/path to db2 command "connect to $DBNAME user $DBUSER using $DBPASS"
+   RES=`/home/db2inst101/sqllib/bin/db2 connect to $DBNAME user $DBUSER using $DBPASS`
+
+   #runs the db2 query to get the ccount
+   result=`/home/db2inst101/sqllib/bin/db2 -x "Query to be run"`
+  
+   #resetting the connection
+   /home/db2inst101/sqllib/bin/db2 connect reset > /dev/null
+
+
+   #performing various comparisions on the query result.
+   if [ result condition value ]
+     then
+       echo " condition is checked "
+       return desired_state(state_ok/state_warning/state_critical)
+   fi
+
+fi
